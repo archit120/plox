@@ -1,7 +1,11 @@
 import sys
 import os
 from sys import stderr
+from token_type import TokenType
+from tokens import Token
 import scanner
+import lox_parser
+import ast_printer
 
 hadError = False
 
@@ -38,16 +42,27 @@ def run_prompt():
 def run(line):
     scan = scanner.Scanner(line)
     tokens = scan.scan_tokens()
+    parser = lox_parser.Parser(tokens)
+    expression = parser.parse()
 
-    for token in tokens:
-        print(token)
+    if hadError:
+        return
+        
+    ast_printer.AstPrinter().print(expression)
 
-def error(line, message):
-    print(line, "", message)
+def error(token, message):
+    if isinstance(token, Token):
+        if token.type == TokenType.EOF:
+            report(token.line, " at end", message)
+        else:
+            report(token.line, " at " + token.lexeme +"'", message)
+    else:
+        # token = line = int
+        report(token, " at end", message)
   
 
 def report(line, where, message):
-    print("[line " + str(line) + "] Error" + where + ": " + message, file=std.stderr)
+    print("[line " + str(line) + "] Error" + where + ": " + message, file=sys.stderr)
     hadError = True
 
 if __name__ == "__main__":

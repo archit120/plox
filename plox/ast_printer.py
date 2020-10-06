@@ -3,9 +3,9 @@ from token_type import *
 
         
 
-class ast_printer():
+class AstPrinter():
     def print(self, expr):
-        expr.accept(self)
+        print(expr.accept(self))
     
     def paranthesize(self, name, *args):
         builder = '(%s'%name
@@ -41,5 +41,5 @@ if __name__ == "__main__":
         )
     )
 
-    print(expression.accept(ast_printer()))
+    print(expression.accept(AstPrinter()))
 
