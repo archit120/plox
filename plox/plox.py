@@ -6,9 +6,12 @@ from tokens import Token
 import scanner
 import lox_parser
 import ast_printer
+import lox_interpreter
+
 
 hadError = False
-
+hadRuntimeError = False
+interpreter = lox_interpreter.Interpreter()
 def main():
     if len(sys.argv) > 2:
         print("Usage: plox [script]")
@@ -26,6 +29,8 @@ def run_file(path):
 
     if hadError:
         exit(65)
+    if hadRuntimeError:
+        exit(70)
 
 def run_prompt():
     while True:
@@ -48,7 +53,7 @@ def run(line):
     if hadError:
         return
         
-    ast_printer.AstPrinter().print(expression)
+    interpreter.interpret(expression)
 
 def error(token, message):
     if isinstance(token, Token):
@@ -59,7 +64,10 @@ def error(token, message):
     else:
         # token = line = int
         report(token, " at end", message)
-  
+
+def runtime_error(error: lox_interpreter.RuntimeError):
+    print(error.args[0] + "\n[line " + str(error.token.line) +"]")
+    hadRuntimeError=True
 
 def report(line, where, message):
     print("[line " + str(line) + "] Error" + where + ": " + message, file=sys.stderr)
