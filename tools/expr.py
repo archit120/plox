@@ -5,6 +5,12 @@ class Expr(ABC):
     def accept(self, visitor):
         return visitor.visit(self)
 
+class Assign(Expr):
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+        assert(isinstance(name,Token))
+        assert(isinstance(value,Expr))
 class Binary(Expr):
     def __init__(self, left, operator, right):
         self.left = left
@@ -27,3 +33,7 @@ class Unary(Expr):
         self.right = right
         assert(isinstance(operator,Token))
         assert(isinstance(right,Expr))
+class Variable(Expr):
+    def __init__(self, name):
+        self.name = name
+        assert(isinstance(name,Token))

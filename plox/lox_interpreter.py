@@ -1,10 +1,18 @@
-from stmt import Expression, Print
+from os import environ
+from typing import List
+from environment import Environment
+from stmt import Block, Expression, Print, Stmt, Var
 from expr import *
 from token_type import *
 import plox
-        
+
 
 class Interpreter():
+    environment: Environment
+
+    def __init__(self):
+        self.environment = Environment()
+
     def evaluate(self, expr):
         return expr.accept(self)
 
@@ -20,9 +28,9 @@ class Interpreter():
             return True
         if a is None:
             return False
-        return a==b
+        return a == b
 
-    def check_number_operand(self, operator, operand, right = None):
+    def check_number_operand(self, operator, operand, right=None):
         if right is None:
             if isinstance(operand, float):
                 return True
@@ -32,8 +40,7 @@ class Interpreter():
                 return True
             raise RuntimeError(operator, "Operands must be a number.")
 
-
-    def visit_binary_expr(self, expr : Binary):
+    def visit_binary_expr(self, expr: Binary):
         left = self.evaluate(expr.left)
         right = self.evaluate(expr.right)
 
@@ -57,12 +64,21 @@ class Interpreter():
             return float(left) / float(right)
         if expr.operator.type == TokenType.STAR:
             return float(left) * float(right)
-        
+
         # Handle addition
         # Can just delegate to python
         if not ((isinstance(left, str) and isinstance(right, str)) or (isinstance(left, float) and isinstance(right, float))):
-            raise RuntimeError(expr.operator, "Operands must be two numbers or two strings.")
+            raise RuntimeError(
+                expr.operator, "Operands must be two numbers or two strings.")
         return left + right
+
+    def visit_var_stmt(self, stmt: Var):
+        value = None
+        if not stmt.initializer is None:
+            value = self.evaluate(stmt.initializer)
+
+        self.environment.define(stmt.name.lexeme, value)
+        return None
 
     def visit(self, expr):
         if isinstance(expr, Binary):
@@ -76,11 +92,21 @@ class Interpreter():
             if expr.operator.type == TokenType.MINUS:
                 self.check_number_operand(expr.operator, right)
                 return -float(right)
-            return not self.is_truthy(right) # Handle Bang operator
+            return not self.is_truthy(right)  # Handle Bang operator
         elif isinstance(expr, Print):
             value = self.evaluate(expr.expression)
             print(self.stringify(value))
-        elif isinstance(expr, Expression):
+        elif type(expr) == Var:
+            self.visit_var_stmt(expr)
+        elif type(expr) == Variable:
+            return self.environment.get(expr.name)
+        elif type(expr) == Assign:
+            value = self.evaluate(expr.value)
+            self.environment.assign(expr.name, value)
+            return value
+        elif type(expr) == Block:
+            self.execute_block(expr.statements, Environment(self.environment))
+        elif type(expr) == Expression:
             self.evaluate(expr.expression)
 
     def interpret(self, statements):
@@ -90,10 +116,20 @@ class Interpreter():
         except RuntimeError as e:
             plox.runtime_error(e)
         except ZeroDivisionError as e:
-            plox.runtime_error(RuntimeError(Token(TokenType.SLASH, "/", None, 1), "Division by zero is not allowed"))
+            plox.runtime_error(RuntimeError(
+                Token(TokenType.SLASH, "/", None, 1), "Division by zero is not allowed"))
 
     def execute(self, stmt):
         stmt.accept(self)
+
+    def execute_block(self, statements: List[Stmt], environment: Environment):
+        previous = self.environment
+        try:
+            self.environment = environment
+            for statement in statements:
+                self.execute(statement)
+        finally:
+            self.environment = previous
 
     def stringify(self, obj):
         if obj is None:
@@ -107,9 +143,8 @@ class Interpreter():
             return str(obj).lower()
         return str(obj)
 
-            
+
 class RuntimeError(Exception):
     def __init__(self, token, message):
         super().__init__(message)
         self.token = token
-

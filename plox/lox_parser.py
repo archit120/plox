@@ -2,7 +2,7 @@ from sys import implementation
 from token_type import *
 from typing import List, Type
 from tokens import Token
-from expr import Binary, Expr, Grouping, Unary, Literal
+from expr import Assign, Binary, Expr, Grouping, Unary, Literal, Variable
 from stmt import *
 import plox
 
@@ -18,7 +18,7 @@ class Parser():
         try:
             statements = []
             while(not self.isAtEnd()):
-                statements.append(self.statement())
+                statements.append(self.declaration())
             return statements
         except ParseError as e:
             return None
@@ -39,6 +39,7 @@ class Parser():
         if self.isAtEnd():
             return self.previous()
         self.current+=1
+        return self.previous()
     
     def isAtEnd(self):
         return self.peek().type == TokenType.EOF
@@ -50,12 +51,46 @@ class Parser():
         return self.tokens[self.current-1]
 
     def expression(self):
-        return self.equality()
-    
+        return self.assignment()
+
+    def assignment(self):
+        expr = self.equality()
+        if self.match(TokenType.EQUAL):
+            equals = self.previous()
+            value = self.assignment()
+
+            if isinstance(expr, Variable):
+                name = expr.name
+                return Assign(name, value)
+            
+            plox.error(equals, 'Invalid assignment target.')
+        
+        return expr
+
+
     def statement(self):
         if self.match(TokenType.PRINT):
             return self.print_statement()
+        if self.match(TokenType.LEFT_BRACE):
+            return Block(self.block())
         return self.expression_statement()
+
+    def declaration(self):
+        try:
+            if self.match(TokenType.VAR):
+                return self.var_declaration()
+            return self.statement()
+        except ParseError as e:
+            self.synchronize()
+            return None
+
+    def var_declaration(self):
+        name = self.consume(TokenType.IDENTIFIER, "Expected variale name.")
+        init = None
+        if self.match(TokenType.EQUAL):
+            init = self.expression()
+        self.consume(TokenType.SEMICOLON, "Expect ; after variable declaration")
+        return Var(name, init)
 
     def print_statement(self):
         value = self.expression()
@@ -66,6 +101,14 @@ class Parser():
         expr = self.expression()
         self.consume(TokenType.SEMICOLON, "Expect ';' after expression.")
         return Expression(expr)
+
+    def block(self):
+        statements = []
+
+        while not self.check(TokenType.RIGHT_BRACE) and not self.isAtEnd():
+            statements.append(self.declaration())
+        self.consume(TokenType.RIGHT_BRACE, "Expect } after block")
+        return statements
 
     def equality(self):
         expr = self.comparison()
@@ -125,6 +168,8 @@ class Parser():
             return Literal(None)
         elif self.match(TokenType.NUMBER, TokenType.STRING):
             return Literal(self.previous().literal)
+        elif self.match(TokenType.IDENTIFIER):
+            return Variable(self.previous())
         elif self.match(TokenType.LEFT_PAREN):
             expr = self.expression()
             self.consume(TokenType.RIGHT_PAREN, "Expected ')' after expression.")
