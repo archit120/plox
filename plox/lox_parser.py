@@ -3,6 +3,7 @@ from token_type import *
 from typing import List, Type
 from tokens import Token
 from expr import Binary, Expr, Grouping, Unary, Literal
+from stmt import *
 import plox
 
 class Parser():
@@ -15,7 +16,10 @@ class Parser():
     
     def parse(self):
         try:
-            return self.expression()
+            statements = []
+            while(not self.isAtEnd()):
+                statements.append(self.statement())
+            return statements
         except ParseError as e:
             return None
 
@@ -48,6 +52,21 @@ class Parser():
     def expression(self):
         return self.equality()
     
+    def statement(self):
+        if self.match(TokenType.PRINT):
+            return self.print_statement()
+        return self.expression_statement()
+
+    def print_statement(self):
+        value = self.expression()
+        self.consume(TokenType.SEMICOLON, "Expect ';' after value.")
+        return Print(value)
+    
+    def expression_statement(self):
+        expr = self.expression()
+        self.consume(TokenType.SEMICOLON, "Expect ';' after expression.")
+        return Expression(expr)
+
     def equality(self):
         expr = self.comparison()
 

@@ -24,7 +24,7 @@ def define_ast(output_dir,  base_name: str, types: List[str]):
     writer.writelines(["from abc import ABC\n"])
     writer.writelines(["from tokens import Token\n"])
     writer.writelines(["\n"])
-    writer.writelines(["class Expr(ABC):\n"])
+    writer.writelines(["class %s(ABC):\n" % base_name])
     writer.writelines([
         "    def accept(self, visitor):\n",
         "        return visitor.visit(self)\n"
@@ -53,6 +53,14 @@ if __name__ == "__main__":
       "Binary   : Expr left, Token operator, Expr right",
       "Grouping : Expr expression",
       "Literal  : object value",
-      "Unary    : Token operator, Expr right"
+      "Unary    : Token operator, Expr right",
+      "Variable : Token name"
     ])
+
+    define_ast(output_dir, "Stmt", [
+      "Expression : Expr expression",
+      "Print      : Expr expression",
+      "Var        : Token name, Expr initializer"
+    ])
+
 

@@ -7,10 +7,8 @@ import scanner
 import lox_parser
 import ast_printer
 import lox_interpreter
+import config
 
-
-hadError = False
-hadRuntimeError = False
 interpreter = lox_interpreter.Interpreter()
 def main():
     if len(sys.argv) > 2:
@@ -27,9 +25,9 @@ def run_file(path):
         src = f.read()
     run(src)
 
-    if hadError:
+    if config.hadError:
         exit(65)
-    if hadRuntimeError:
+    if config.hadRuntimeError:
         exit(70)
 
 def run_prompt():
@@ -42,18 +40,18 @@ def run_prompt():
             run(line)
         else:
             break
-        hadError = False
+        config.hadError = False
 
 def run(line):
     scan = scanner.Scanner(line)
     tokens = scan.scan_tokens()
     parser = lox_parser.Parser(tokens)
-    expression = parser.parse()
+    statements = parser.parse()
 
-    if hadError:
+    if config.hadError:
         return
         
-    interpreter.interpret(expression)
+    interpreter.interpret(statements)
 
 def error(token, message):
     if isinstance(token, Token):
@@ -67,11 +65,12 @@ def error(token, message):
 
 def runtime_error(error: lox_interpreter.RuntimeError):
     print(error.args[0] + "\n[line " + str(error.token.line) +"]")
-    hadRuntimeError=True
+    config.hadRuntimeError=True
 
 def report(line, where, message):
     print("[line " + str(line) + "] Error" + where + ": " + message, file=sys.stderr)
-    hadError = True
+    config.hadError = True
 
 if __name__ == "__main__":
+    config.init()
     main()

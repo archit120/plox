@@ -1,3 +1,4 @@
+from stmt import Expression, Print
 from expr import *
 from token_type import *
 import plox
@@ -76,13 +77,23 @@ class Interpreter():
                 self.check_number_operand(expr.operator, right)
                 return -float(right)
             return not self.is_truthy(right) # Handle Bang operator
+        elif isinstance(expr, Print):
+            value = self.evaluate(expr.expression)
+            print(self.stringify(value))
+        elif isinstance(expr, Expression):
+            self.evaluate(expr.expression)
 
-    def interpret(self, expression):
+    def interpret(self, statements):
         try:
-            val = self.evaluate(expression)
-            print(self.stringify(val))
+            for statement in statements:
+                self.execute(statement)
         except RuntimeError as e:
             plox.runtime_error(e)
+        except ZeroDivisionError as e:
+            plox.runtime_error(RuntimeError(Token(TokenType.SLASH, "/", None, 1), "Division by zero is not allowed"))
+
+    def execute(self, stmt):
+        stmt.accept(self)
 
     def stringify(self, obj):
         if obj is None:
@@ -101,18 +112,4 @@ class RuntimeError(Exception):
     def __init__(self, token, message):
         super().__init__(message)
         self.token = token
-
-if __name__ == "__main__":
-    expression = Binary(
-        Unary(
-            Token(TokenType.MINUS, "-", None, 1),
-            Literal(123)
-        ),
-        Token(TokenType.STAR, "*", None, 1),
-        Grouping(
-            Literal(45.67)
-        )
-    )
-
-    print(expression.accept(AstPrinter()))
 

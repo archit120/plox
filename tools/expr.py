@@ -1,9 +1,9 @@
 from abc import ABC
-from token import Token
+from tokens import Token
 
 class Expr(ABC):
     def accept(self, visitor):
-        visitor.visit(self)
+        return visitor.visit(self)
 
 class Binary(Expr):
     def __init__(self, left, operator, right):
